@@ -1,7 +1,8 @@
 package cn.handyplus.region.listener;
 
 import cn.handyplus.lib.annotation.HandyListener;
-import cn.handyplus.lib.expand.adapter.HandySchedulerUtil;
+import cn.handyplus.lib.internal.HandyLoginEvent;
+import cn.handyplus.lib.internal.HandySchedulerUtil;
 import cn.handyplus.lib.util.HandyHttpUtil;
 import cn.handyplus.region.constants.BaseIpConstants;
 import cn.handyplus.region.enter.Ip2regionEnter;
@@ -9,9 +10,7 @@ import cn.handyplus.region.service.Ip2regionService;
 import cn.handyplus.region.util.IpUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 
 import java.util.Optional;
 
@@ -21,7 +20,7 @@ import java.util.Optional;
  * @author handy
  */
 @HandyListener
-public class PlayerJoinEventListener implements Listener {
+public class HandyLoginEventListener implements Listener {
 
     /**
      * 玩家进入
@@ -29,7 +28,7 @@ public class PlayerJoinEventListener implements Listener {
      * @param event 事件
      */
     @EventHandler
-    public void onJoin(PlayerJoinEvent event) {
+    public void onEvent(HandyLoginEvent event) {
         Player player = event.getPlayer();
         HandySchedulerUtil.runTaskAsynchronously(() -> {
             Optional<Ip2regionEnter> ip2regionEnterOptional = Ip2regionService.getInstance().findByPlayerUuid(player.getUniqueId().toString());
@@ -49,16 +48,8 @@ public class PlayerJoinEventListener implements Listener {
             }
             IpUtil.getPlayerRegion(player);
         });
-    }
-
-    /**
-     * op进入服务器发送更新提醒
-     *
-     * @param event 事件
-     */
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onOpPlayerJoin(PlayerJoinEvent event) {
-        HandyHttpUtil.checkVersion(event.getPlayer());
+        // OP 进入服务器发送更新提醒
+        HandyHttpUtil.checkVersion(player);
     }
 
 }

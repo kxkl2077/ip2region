@@ -95,7 +95,7 @@ public class PlaceholderUtil extends PlaceholderExpansion {
             if (BaseIpConstants.LOCAL.equals(provincialStr)) {
                 provincialStr = local;
             }
-            return removeProvinceAndCity ? provincialStr.replace("省", "") : provincialStr;
+            return this.removeProvinceAndCitySuffix(provincialStr, removeProvinceAndCity);
         }
         // %ip2region_municipal% 市
         if ("municipal".equals(identifier)) {
@@ -103,7 +103,7 @@ public class PlaceholderUtil extends PlaceholderExpansion {
             if (BaseIpConstants.LOCAL.equals(municipalStr)) {
                 municipalStr = local;
             }
-            return removeProvinceAndCity ? municipalStr.replace("市", "") : municipalStr;
+            return this.removeProvinceAndCitySuffix(municipalStr, removeProvinceAndCity);
         }
         // %ip2region_serviceProvider% 运营商
         if ("serviceProvider".equals(identifier)) {
@@ -114,6 +114,20 @@ public class PlaceholderUtil extends PlaceholderExpansion {
             return "0".equals(district) ? unknown : district;
         }
         return null;
+    }
+
+    /**
+     * 移除省和市后缀
+     *
+     * @param str                 字符串
+     * @param removeProvinceAndCity 是否移除
+     * @return 处理后的字符串
+     */
+    private String removeProvinceAndCitySuffix(String str, boolean removeProvinceAndCity) {
+        if (!removeProvinceAndCity) {
+            return str;
+        }
+        return str.replace("省", "").replace("市", "");
     }
 
     /**
