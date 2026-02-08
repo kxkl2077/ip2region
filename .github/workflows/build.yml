@@ -6,7 +6,7 @@ on:
       - master
       - main
   release:
-    types: [published]   # 创建新 release 时触发
+    types: [published]
   pull_request:
     branches:
       - master
@@ -34,8 +34,76 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Decode and set up Maven settings
-        run: echo "${{ secrets.MAVEN_SETTINGS_BASE64 }}" | base64 --decode > $HOME/.m2/settings.xml
+      - name: Setup Maven settings
+        run: |
+          # 创建 .m2 目录
+          mkdir -p ~/.m2
+          
+          # 清理可能存在的空settings.xml
+          if [ -f ~/.m2/settings.xml ] && [ ! -s ~/.m2/settings.xml ]; then
+            echo "Removing empty settings.xml"
+            rm ~/.m2/settings.xml
+          fi
+          
+          # 尝试解码settings.xml，如果失败则创建默认配置
+          if [ -n "${{ secrets.MAVEN_SETTINGS_BASE64 }}" ]; then
+            echo "Decoding Maven settings from secret..."
+            echo "${{ secrets.MAVEN_SETTINGS_BASE64 }}" | base64 --decode > ~/.m2/settings.xml 2>/dev/null || true
+            
+            # 检查解码后的文件是否有效
+            if [ -f ~/.m2/settings.xml ] && [ -s ~/.m2/settings.xml ]; then
+              echo "Using custom Maven settings"
+            else
+              echo "Failed to decode settings.xml, using default settings"
+              rm -f ~/.m2/settings.xml
+              create_default_settings
+            fi
+          else
+            echo "No MAVEN_SETTINGS_BASE64 secret found, using default Maven settings"
+            create_default_settings
+          fi
+          
+          # 创建默认settings.xml的函数
+          create_default_settings() {
+            cat > ~/.m2/settings.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <localRepository>${user.home}/.m2/repository</localRepository>
+    <interactiveMode>true</interactiveMode>
+    <offline>false</offline>
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <maven.compiler.source>21</maven.compiler.source>
+                <maven.compiler.target>21</maven.compiler.target>
+                <maven.compiler.release>21</maven.compiler.release>
+            </properties>
+        </profile>
+    </profiles>
+    <activeProfiles>
+        <activeProfile>default</activeProfile>
+    </activeProfiles>
+</settings>
+EOF
+          }
+
+      - name: Verify Maven settings
+        run: |
+          echo "Checking Maven settings..."
+          if [ -f ~/.m2/settings.xml ]; then
+            echo "settings.xml exists, size: $(wc -l < ~/.m2/settings.xml) lines"
+            echo "First few lines:"
+            head -10 ~/.m2/settings.xml
+          else
+            echo "No settings.xml file, Maven will use default settings"
+          fi
 
       - name: Build with Maven
         run: mvn --batch-mode clean package -DskipTests
